@@ -1,10 +1,10 @@
 import csv
+import logging
 import random
 import threading
 import time
 
 from tweepy import Cursor, TweepError
-from datetime import datetime as dt
 
 
 PAGE_COUNT = 200
@@ -13,10 +13,17 @@ FRIENDS_COUNT = 50
 FOLLOWERS_COUNT = 100
 TWEETS_FILE = 'data/tweets.csv'
 USERS_FILE = 'data/userids.txt'
+LOG_LEVEL = 2
 
+formatter = logging.Formatter("[%(asctime)s | (%(threadName)s)] %(message)s",
+                              "%H:%M:%S")
+h = logging.StreamHandler()
+h.setLevel(LOG_LEVEL)
+h.setFormatter(formatter)
 
-def get_now():
-    return '[{}]'.format(dt.now().strftime("%H:%M:%S %Y-%m-%d"))
+logger = logging.getLogger('collector-logger')
+logger.setLevel(LOG_LEVEL)
+logger.addHandler(h)
 
 
 class Collector:
@@ -25,7 +32,7 @@ class Collector:
         self.api = api
 
     def get_tweets(self, user_id):
-        print '> {} Getting tweets for {}'.format(get_now(), user_id)
+        logger.log(LOG_LEVEL, 'Getting tweets for {}'.format(user_id))
         statuses = []
 
         cursor = Cursor(
@@ -51,7 +58,7 @@ class Collector:
         return friends + followers
 
     def get_followers(self, user_id):
-        print '> {} Getting followers for {}'.format(get_now(), user_id)
+        logger.log(LOG_LEVEL, 'Getting followers for {}'.format(user_id))
         followers = []
 
         cursor = Cursor(
@@ -66,7 +73,7 @@ class Collector:
         return followers
 
     def get_friends(self, user_id):
-        print '> {} Getting friends for {}'.format(get_now(), user_id)
+        logger.log(LOG_LEVEL, 'Getting friends for {}'.format(user_id))
         friends = []
 
         cursor = Cursor(
@@ -96,7 +103,7 @@ class Collector:
 
     def save_tweets(self, tweets, filename):
         user = tweets[0]['screen_name']
-        print '> {} Saving {}\'s tweets to file'.format(get_now(), user)
+        logger.log(LOG_LEVEL, 'Saving {}\'s tweets to file'.format(user))
 
         fieldnames = ['id', 'user_id', 'screen_name', 'created_at', 'text']
         with open(filename, 'ab') as f:
@@ -124,10 +131,10 @@ class TweetCollectorThread(threading.Thread):
         while True:
             if not self.q.empty():
                 user_id = self.q.get()
-                msg = '> {} C{} getting {} - {} ids left in queue'.format(
-                    get_now(), self.name, user_id, self.q.qsize()
+                msg = 'Getting {} - {} ids left in queue'.format(
+                    user_id, self.q.qsize()
                 )
-                print msg
+                logger.log(LOG_LEVEL, msg)
 
                 try:
                     tweets = self.collector.get_tweets(user_id=user_id)
@@ -153,10 +160,10 @@ class UserCollectorThread(threading.Thread):
         while True:
             if not self.q.empty():
                 user_id = self.q.get()
-                msg = '> {} C{} getting {} - {} ids left in queue'.format(
-                    get_now(), self.name, user_id, self.q.qsize()
+                msg = 'Getting {} - {} ids left in queue'.format(
+                    user_id, self.q.qsize()
                 )
-                print msg
+                logger.log(LOG_LEVEL, msg)
 
                 try:
                     users = self.collector.get_users(user_id=user_id)
