@@ -107,9 +107,10 @@ class Collector:
 
         fieldnames = ['id', 'user_id', 'screen_name', 'created_at', 'text']
         with open(filename, 'ab') as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.writer(f)
             for t in tweets:
-                writer.writerow(t)
+                row = [t[field] for field in fieldnames]
+                writer.writerow(row)
 
     def save_users(self, users, filename):
         with open(filename, 'ab') as f:
